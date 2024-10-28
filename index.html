@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NIST Lottery</title>
+    <meta name="description" content="Calculate the winner of a lottery using secure random values from the NIST Randomness Beacon. Enter the date, time, and number of participants to determine the winning number.">
+    <meta name="keywords" content="NIST, Lottery, Randomness Beacon, Random Number, Lottery Winner, Cryptography, Secure Random">
+
+    <!-- Connect Vue.js -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <!-- Connect Vue Toasted -->
+    <script src="https://cdn.jsdelivr.net/npm/vue-toasted"></script>
+
+    <!-- Connect Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Connect Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <!-- Connect Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
+    <!-- Your styles -->
+    <style>
+        [v-cloak] {
+            display: none;
+        }
+
+        .word-wrap {
+            word-break: break-all;
+        }
+
+        .code-block {
+            white-space: pre-wrap; /* CSS3 */
+            white-space: -moz-pre-wrap; /* Firefox */
+            white-space: -pre-wrap; /* Opera <7 */
+            white-space: -o-pre-wrap; /* Opera 7 */
+            word-wrap: break-word; /* IE */
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            position: relative;
+        }
+
+        .code-container {
+            position: relative;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ffffff;
+            border: 1px solid #007bff;
+            cursor: pointer;
+            font-size: 16px;
+            color: #007bff;
+            padding: 5px;
+            border-radius: 4px;
+            z-index: 10;
+        }
+
+        .copy-button:hover {
+            background-color: #e9ecef;
+        }
+
+        .description {
+            text-align: left;
+            background-color: #f9f9f9; /* Light grey background */
+            padding: 20px;
+            border: 1px solid #ddd; /* Light border */
+            border-radius: 5px;
+            margin-bottom: 30px;
+        }
+
+        .description h2 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .description p {
+            font-size: 1em;
+            line-height: 1.6;
+        }
+
+        .description ol {
+            padding-left: 20px;
+        }
+
+        .description ol li {
+            margin-bottom: 10px;
+        }
+
+        .description strong {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div id="app" v-cloak class="container mt-5">
+    <h1 class="text-center mb-4">Calculate Lottery Winner</h1>
+
+    <!-- Description -->
+    <div class="description">
+        <h2>About This Tool</h2>
+        <p>
+            This tool allows you to conduct a fair and transparent lottery using random values provided by the <a href="https://beacon.nist.gov/home" target="_blank">NIST Randomness Beacon</a>. To ensure fairness, please follow these steps:
+        </p>
+        <ol>
+            <li><strong>Select a Future Date and Time (UTC):</strong> Choose a date and time in the future when the lottery will be drawn.</li>
+            <li><strong>Record Participants:</strong> Before the draw time, list all participants and assign each a unique number.</li>
+            <li><strong>Announce the Draw Details:</strong> Share the draw date, time, and participant list with all stakeholders to maintain transparency.</li>
+            <li><strong>Determine the Winner:</strong> After the draw time has passed, return to this page and enter the date, time, and total number of participants to calculate the winning number.</li>
+        </ol>
+        <p>
+            The calculation uses a cryptographically secure random value from the NIST Randomness Beacon corresponding to the selected date and time. This method ensures the result is unpredictable and cannot be manipulated, providing a fair outcome for all participants.
+        </p>
+    </div>
+
+    <form @submit.prevent="handleFormSubmit">
+        <div class="form-group">
+            <label for="date">Date:</label>
+            <input type="text" id="date" class="form-control" v-model="date" required>
+        </div>
+
+        <div class="form-group">
+            <label for="time">Time (HH:MM, UTC):</label>
+            <input type="time" id="time" class="form-control" v-model="time" placeholder="HH:MM" required>
+        </div>
+
+        <div class="form-group">
+            <label for="participants">Number of Participants:</label>
+            <input type="number" id="participants" class="form-control" min="1" v-model.number="participants" placeholder="Enter number of participants" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" :disabled="isLoading">
+            <span v-if="!isLoading">Calculate Winner</span>
+            <span v-else>
+                <i class="fas fa-spinner fa-spin"></i> Calculating...
+            </span>
+        </button>
+    </form>
+
+    <!-- Error message -->
+    <div v-if="message" class="mt-4" :class="messageClass" v-html="message"></div>
+
+    <!-- Display results -->
+    <div v-if="winnerNumber" class="mt-4 alert alert-success">
+        <h4>Results</h4>
+        <p><strong>NIST Random Value (Hexadecimal):</strong></p>
+        <p class="word-wrap">
+            <a :href="nistUrl" target="_blank">{{ outputValue }}</a>
+        </p>
+        <p><strong>Winner Number:</strong> {{ winnerNumber }}</p>
+        <p>You can use the following code to verify the calculations:</p>
+        <div class="code-container">
+            <pre class="code-block" ref="codeExample">{{ codeExample }}</pre>
+            <button class="copy-button" @click="copyCode" title="Copy code">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<footer class="text-center mt-5">
+    <hr>
+    <p>&copy; 2024 Dmitrij Koniajev</p>
+</footer>
+
+<!-- Connect Flatpickr JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<!-- Connect Flatpickr locales -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/all.js"></script>
+<!-- Connect your Vue.js script -->
+<script src="script.js"></script>
+</body>
+</html>
